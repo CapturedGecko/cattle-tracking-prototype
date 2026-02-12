@@ -47,3 +47,19 @@ code{ color: var(--muted); }
   .layout{ grid-template-columns: 1fr; grid-template-rows: 320px 1fr; }
   .panel{ border-right:none; border-bottom:1px solid var(--border); }
 }
+/* Leaflet legend */
+.legend{
+  background: rgba(17,26,46,.92);
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 14px;
+  padding: 10px 12px;
+  color: #e7eefc;
+  min-width: 170px;
+  box-shadow: 0 10px 25px rgba(0,0,0,.30);
+}
+.legendTitle{ font-weight: 800; margin-bottom: 6px; }
+.legendBlock{ margin-top: 8px; }
+.legendLabel{ color: rgba(231,238,252,.75); font-size: 12px; margin-bottom: 4px; }
+.legendRow{ display:flex; align-items:center; gap:8px; margin: 3px 0; font-size: 12px; color: rgba(231,238,252,.85); }
+.swatch{ width: 14px; height: 14px; border-radius: 4px; border: 1px solid rgba(255,255,255,.20); display:inline-block; }
+.legendNote{ margin-top: 8px; font-size: 11px; color: rgba(231,238,252,.65); }
