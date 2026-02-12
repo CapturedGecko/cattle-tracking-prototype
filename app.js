@@ -8,10 +8,30 @@ function setStatus(msg){ statusEl.textContent = msg; }
 const map = L.map("map", { zoomControl: true }).setView([7.5, 30.5], 6);
 
 // Base map (online)
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+// ---- Base maps (Street + Satellite) ----
+const street = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 19,
   attribution: "&copy; OpenStreetMap contributors"
-}).addTo(map);
+});
+
+const satellite = L.tileLayer(
+  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  {
+    maxZoom: 19,
+    attribution: "Tiles &copy; Esri"
+  }
+);
+
+// Start with street by default
+street.addTo(map);
+
+// Add a toggle button (top-right) to switch basemaps
+L.control.layers(
+  { "Street": street, "Satellite": satellite },
+  null,
+  { position: "topright" }
+).addTo(map);
+
 
 // Layer config (expects GeoJSON files you’ll add later)
 const LAYER_CONFIG = {
