@@ -21,19 +21,35 @@
     <aside class="panel">
       <div class="panelHeader">
         <div class="title">Cattle Tracking Prototype</div>
-        <div class="subtitle">UN INTERNAL • Aggregated surfaces only</div>
+        <div class="subtitle">UN INTERNAL • Prototype viewer</div>
       </div>
 
       <div class="controls">
-        <div class="row">
-          <label class="label" for="dateSelect">Date</label>
-          <button id="prevBtn" class="navBtn" type="button" aria-label="Previous day">←</button>
-          <select id="dateSelect"></select>
-          <button id="nextBtn" class="navBtn" type="button" aria-label="Next day">→</button>
-          <span id="leadTag" class="leadTag">Day +0</span>
+        <div class="sectionTitle">Base + Satellite</div>
+        <div class="hint">
+          Use the layer button on the map (top-right) to switch <b>Street</b> / <b>Satellite</b>.
         </div>
 
-        <div class="sectionTitle">Layers</div>
+        <div class="sectionTitle">NDVI (Vegetation)</div>
+        <label class="check">
+          <input id="ndviToggle" type="checkbox" />
+          <span>Show NDVI overlay (NASA GIBS)</span>
+        </label>
+
+        <div class="row">
+          <label class="label" for="ndviOpacity">NDVI opacity</label>
+          <input id="ndviOpacity" type="range" min="0" max="100" value="55" />
+          <span id="ndviOpacityLabel" class="pill">55%</span>
+        </div>
+
+        <div class="sectionTitle">Model Outputs (optional)</div>
+        <div class="hint">
+          If these files exist, they will load from <code>data/latest/</code>:
+          <br/>• <code>presence.geojson</code>
+          • <code>hotspots.geojson</code>
+          • <code>corridors.geojson</code>
+          • <code>detections.geojson</code>
+        </div>
 
         <label class="check">
           <input type="checkbox" data-layer="presence" checked />
@@ -41,31 +57,29 @@
         </label>
 
         <label class="check">
-          <input type="checkbox" data-layer="corridors" />
-          <span>Movement corridors</span>
-        </label>
-
-        <label class="check">
-          <input type="checkbox" data-layer="hotspots" />
+          <input type="checkbox" data-layer="hotspots" checked />
           <span>Conflict risk hotspots</span>
         </label>
 
         <label class="check">
-          <input type="checkbox" data-layer="grazing" />
-          <span>Grazing viability</span>
+          <input type="checkbox" data-layer="corridors" checked />
+          <span>Movement corridors</span>
         </label>
 
         <label class="check">
-          <input type="checkbox" data-layer="water" />
-          <span>Water access</span>
+          <input type="checkbox" data-layer="detections" />
+          <span>Detections (YOLO points)</span>
         </label>
 
-        <div class="hint">
-          Tip: Dates come from <code>data/index.json</code>. Each date loads files from
-          <code>data/YYYY-MM-DD/</code>.
+        <div class="row" style="margin-top:10px;">
+          <button id="reloadBtn" class="btn" type="button">Reload data/latest</button>
         </div>
 
-        <div id="status" class="status">Loading…</div>
+        <div id="status" class="status">Ready.</div>
+
+        <div class="hint" style="margin-top:10px;">
+          Tip: If the map is blank, hard refresh: <b>Ctrl + Shift + R</b>.
+        </div>
       </div>
     </aside>
 
