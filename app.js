@@ -3,6 +3,11 @@ const ndviToggle = document.getElementById("ndviToggle");
 const ndviOpacity = document.getElementById("ndviOpacity");
 const ndviOpacityLabel = document.getElementById("ndviOpacityLabel");
 const reloadBtn = document.getElementById("reloadBtn");
+
+const reloadNdviBtn = document.getElementById("reloadNdviBtn");
+const ndviStatsEl = document.getElementById("ndviStats");
+const ndviChartCanvas = document.getElementById("ndviChart");
+
 const layerChecks = document.querySelectorAll('input[type="checkbox"][data-layer]');
 
 function setStatus(msg){ statusEl.textContent = msg; }
@@ -13,7 +18,15 @@ function clamp01(x){
 }
 
 // ---------- Map ----------
-const map = L.map("map", { zoomControl: true }).setView([7.5, 30.5], 6);
+const map = L.map("map", {
+  zoomControl: true,
+  maxZoom: 18 // prevents “map data not yet available” when people zoom into nothing
+}).setView([7.5, 30.5], 6);
+
+// Panes (lets us control overlay opacity reliably)
+map.createPane("ndviPane");
+map.getPane("ndviPane").style.zIndex = 350;
+map.getPane("ndviPane").style.pointerEvents = "none";
 
 // Base maps
 const street = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -23,37 +36,66 @@ const street = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
 
 const satellite = L.tileLayer(
   "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-  { maxZoom: 19, attribution: "Tiles &copy; Esri" }
+  { maxZoom: 18, attribution: "Tiles &copy; Esri" }
 );
 
 street.addTo(map);
+
+// Layer control (base layers only)
+L.control.layers(
+  { Street: street, Satellite: satellite },
+  {},
+  { position: "topright" }
+).addTo(map);
+
 setTimeout(() => map.invalidateSize(), 200);
 
-// NDVI overlay (NASA GIBS WMS) — free, no key
-// Layer: MODIS_Terra_NDVI_8Day (8-day composite NDVI)
+// ---------- NDVI overlay (temporary: NASA GIBS MODIS NDVI) ----------
+// This is NOT Sentinel-2 yet. It’s a “works now” NDVI overlay.
+// Sentinel-2 will come from Sentinel Hub / Earth Engine (next section).
 const ndviLayer = L.tileLayer.wms(
   "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi",
   {
     layers: "MODIS_Terra_NDVI_8Day",
     format: "image/png",
     transparent: true,
-    opacity: 0.55
-    // If later you want a specific date: time: "YYYY-MM-DD"
+    pane: "ndviPane"
   }
 );
 
-// Add Leaflet layer control (top-right)
-L.control.layers(
-  { Street: street, Satellite: satellite },
-  { "NDVI (Vegetation)": ndviLayer },
-  { position: "topright" }
-).addTo(map);
+// NDVI controls (pane opacity = reliable)
+function applyNdviOpacity(){
+  const v = Number(ndviOpacity.value);
+  const op = clamp01(v / 100);
+  ndviOpacityLabel.textContent = `${v}%`;
+
+  // Pane opacity is a guaranteed visual change
+  map.getPane("ndviPane").style.opacity = String(op);
+
+  // Also set layer opacity (fine if it works)
+  if (ndviLayer.setOpacity) ndviLayer.setOpacity(op);
+
+  // Force redraw to avoid “opacity doesn’t update until movement” issues
+  if (ndviLayer.redraw) ndviLayer.redraw();
+}
+
+ndviToggle.addEventListener("change", () => {
+  if (ndviToggle.checked) {
+    ndviLayer.addTo(map);
+    applyNdviOpacity();
+  } else {
+    map.removeLayer(ndviLayer);
+  }
+});
+
+ndviOpacity.addEventListener("input", applyNdviOpacity);
+applyNdviOpacity();
 
 // ---------- Optional GeoJSON overlays ----------
-const DATA_ROOT = "data/latest"; // easiest “automatic” contract later
+const DATA_ROOT = "data/latest";
 const layersOnMap = {};
 
-// Color ramps
+// Color helpers
 function presenceColor(p){
   p = clamp01(p);
   if (p >= 0.8) return "#08306b";
@@ -101,7 +143,7 @@ function styleFor(key, feature){
 
   if (cfg.type === "line"){
     const w = clamp01(v ?? 0.5);
-    return { weight: 2 + 6*w, opacity: 0.9 };
+    return { weight: 2 + 6*w, opacity: 0.9, color: "#c7d2fe" };
   }
 
   if (key === "hotspots"){
@@ -161,7 +203,6 @@ async function loadLayer(key){
 async function refreshDataLayers(){
   setStatus("Loading data/latest…");
 
-  // remove existing
   for (const k of Object.keys(layersOnMap)){
     map.removeLayer(layersOnMap[k]);
     delete layersOnMap[k];
@@ -213,26 +254,81 @@ async function refreshDataLayers(){
   }
 }
 
-// ---------- NDVI controls ----------
-function setNdviOpacityFromUI(){
-  const v = Number(ndviOpacity.value);
-  const op = clamp01(v / 100);
-  ndviLayer.setOpacity(op);
-  ndviOpacityLabel.textContent = `${v}%`;
-}
-
-ndviToggle.addEventListener("change", () => {
-  if (ndviToggle.checked) ndviLayer.addTo(map);
-  else map.removeLayer(ndviLayer);
-});
-
-ndviOpacity.addEventListener("input", setNdviOpacityFromUI);
-setNdviOpacityFromUI();
-
-// ---------- Data controls ----------
 layerChecks.forEach((cb) => cb.addEventListener("change", refreshDataLayers));
 reloadBtn.addEventListener("click", refreshDataLayers);
 
+// ---------- NDVI histogram ----------
+let ndviChart = null;
+
+function renderNdviChart(hist){
+  // Expected JSON (example):
+  // {
+  //   "date":"2026-02-11",
+  //   "bins":[-0.2,-0.1,0,0.1,...,1.0],   // edges
+  //   "counts":[12,55,90,...],           // length = bins-1
+  //   "mean":0.31, "p10":0.12, "p90":0.58
+  // }
+
+  const bins = hist?.bins;
+  const counts = hist?.counts;
+
+  if (!Array.isArray(bins) || !Array.isArray(counts) || bins.length !== counts.length + 1){
+    ndviStatsEl.textContent = "ndvi_hist.json exists but format is wrong (bins must be edges, counts must be bins-1).";
+    return;
+  }
+
+  const labels = [];
+  for (let i = 0; i < counts.length; i++){
+    const mid = (Number(bins[i]) + Number(bins[i+1])) / 2;
+    labels.push(mid.toFixed(2));
+  }
+
+  const stats = [];
+  if (hist.date) stats.push(`Date: ${hist.date}`);
+  if (typeof hist.mean === "number") stats.push(`Mean NDVI: ${hist.mean.toFixed(3)}`);
+  if (typeof hist.p10 === "number") stats.push(`P10: ${hist.p10.toFixed(3)}`);
+  if (typeof hist.p90 === "number") stats.push(`P90: ${hist.p90.toFixed(3)}`);
+  ndviStatsEl.textContent = stats.length ? stats.join(" • ") : "Histogram loaded.";
+
+  if (ndviChart) ndviChart.destroy();
+
+  ndviChart = new Chart(ndviChartCanvas, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{
+        label: "NDVI distribution",
+        data: counts
+      }]
+    },
+    options: {
+      responsive: true,
+      animation: false,
+      scales: {
+        x: { title: { display: true, text: "NDVI bin midpoint" } },
+        y: { title: { display: true, text: "Pixel count" } }
+      },
+      plugins: {
+        legend: { display: false }
+      }
+    }
+  });
+}
+
+async function loadNdviHistogram(){
+  const url = `${DATA_ROOT}/ndvi_hist.json`;
+  const hist = await fetchJSON(url);
+  if (!hist){
+    ndviStatsEl.textContent = `No NDVI histogram found at ${url} (this is expected until you generate it).`;
+    if (ndviChart) { ndviChart.destroy(); ndviChart = null; }
+    return;
+  }
+  renderNdviChart(hist);
+}
+
+reloadNdviBtn.addEventListener("click", loadNdviHistogram);
+
 // Start
-setStatus("Ready. Toggle NDVI or reload data/latest.");
+setStatus("Ready. NDVI overlay + GeoJSON optional layers.");
 refreshDataLayers();
+loadNdviHistogram();
