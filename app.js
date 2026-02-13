@@ -1,26 +1,18 @@
 const statusEl = document.getElementById("status");
-const dateSelect = document.getElementById("dateSelect");
-const prevBtn = document.getElementById("prevBtn");
-const nextBtn = document.getElementById("nextBtn");
-const leadTag = document.getElementById("leadTag");
-const checkboxes = document.querySelectorAll('input[type="checkbox"][data-layer]');
+const ndviToggle = document.getElementById("ndviToggle");
+const ndviOpacity = document.getElementById("ndviOpacity");
+const ndviOpacityLabel = document.getElementById("ndviOpacityLabel");
+const reloadBtn = document.getElementById("reloadBtn");
+const layerChecks = document.querySelectorAll('input[type="checkbox"][data-layer]');
 
-function setStatus(msg) { statusEl.textContent = msg; }
-
-// ---------- Date helpers (avoid timezone bugs) ----------
-function parseISODate(d) { return new Date(d + "T00:00:00Z"); }
-function diffDays(aISO, bISO) {
-  const a = parseISODate(aISO);
-  const b = parseISODate(bISO);
-  return Math.round((a - b) / (1000 * 60 * 60 * 24));
-}
-function clamp01(x) {
+function setStatus(msg){ statusEl.textContent = msg; }
+function clamp01(x){
   const n = Number(x);
   if (Number.isNaN(n)) return 0;
   return Math.max(0, Math.min(1, n));
 }
 
-// ---------- Map setup ----------
+// ---------- Map ----------
 const map = L.map("map", { zoomControl: true }).setView([7.5, 30.5], 6);
 
 // Base maps
@@ -35,18 +27,34 @@ const satellite = L.tileLayer(
 );
 
 street.addTo(map);
-
-// IMPORTANT: forces Leaflet to re-measure the map container after layout settles
 setTimeout(() => map.invalidateSize(), 200);
 
+// NDVI overlay (NASA GIBS WMS) — free, no key
+// Layer: MODIS_Terra_NDVI_8Day (8-day composite NDVI)
+const ndviLayer = L.tileLayer.wms(
+  "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi",
+  {
+    layers: "MODIS_Terra_NDVI_8Day",
+    format: "image/png",
+    transparent: true,
+    opacity: 0.55
+    // If later you want a specific date: time: "YYYY-MM-DD"
+  }
+);
+
+// Add Leaflet layer control (top-right)
 L.control.layers(
   { Street: street, Satellite: satellite },
-  null,
+  { "NDVI (Vegetation)": ndviLayer },
   { position: "topright" }
 ).addTo(map);
 
-// ---------- Color ramps ----------
-function presenceColor(p) {
+// ---------- Optional GeoJSON overlays ----------
+const DATA_ROOT = "data/latest"; // easiest “automatic” contract later
+const layersOnMap = {};
+
+// Color ramps
+function presenceColor(p){
   p = clamp01(p);
   if (p >= 0.8) return "#08306b";
   if (p >= 0.6) return "#08519c";
@@ -54,8 +62,7 @@ function presenceColor(p) {
   if (p >= 0.2) return "#6baed6";
   return "#c6dbef";
 }
-
-function riskColor(r) {
+function riskColor(r){
   r = clamp01(r);
   if (r >= 0.8) return "#7f0000";
   if (r >= 0.6) return "#b30000";
@@ -63,234 +70,169 @@ function riskColor(r) {
   if (r >= 0.2) return "#fc8d59";
   return "#fee0d2";
 }
+function detColor(c){
+  c = clamp01(c);
+  if (c >= 0.8) return "#00d18f";
+  if (c >= 0.6) return "#f1c40f";
+  return "#ff6b6b";
+}
 
-// ---------- Layer config ----------
 const LAYER_CONFIG = {
-  grazing:   { file: "grazing.geojson",   type: "poly", valueProp: "g" },     // optional 0..1
-  water:     { file: "water.geojson",     type: "poly", valueProp: "w" },     // optional 0..1
-  presence:  { file: "presence.geojson",  type: "poly", valueProp: "p" },     // recommended 0..1
-  corridors: { file: "corridors.geojson", type: "line", valueProp: "w" },     // optional 0..1
-  hotspots:  { file: "hotspots.geojson",  type: "poly", valueProp: "risk" }   // recommended 0..1
+  presence:   { file: "presence.geojson",   type: "poly",  valueProp: "p" },
+  hotspots:   { file: "hotspots.geojson",   type: "poly",  valueProp: "risk" },
+  corridors:  { file: "corridors.geojson",  type: "line",  valueProp: "w" },
+  detections: { file: "detections.geojson", type: "point", valueProp: "conf" }
 };
 
-const layersOnMap = {};
-let availableDates = [];
-let baseDate = null;  // Day 0 = index.latest
-
-async function fetchJSON(url) {
-  try {
+async function fetchJSON(url){
+  try{
     const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) return null;
     return await res.json();
-  } catch {
+  }catch{
     return null;
   }
 }
 
-// Decreasing-confidence fade (0..30 days)
-function leadFade(leadDays) {
-  const f = 1 - (leadDays / 46);   // 0->1.0, 30->~0.35
-  return Math.max(0.35, Math.min(1.0, f));
-}
-
-function geojsonStyleFor(key, feature, leadDays) {
+function styleFor(key, feature){
   const cfg = LAYER_CONFIG[key];
   const props = feature?.properties || {};
   const v = props[cfg.valueProp];
 
-  const fade = leadFade(Math.max(0, leadDays));
-
-  if (cfg.type === "line") {
+  if (cfg.type === "line"){
     const w = clamp01(v ?? 0.5);
-    return { weight: (2 + 6 * w), opacity: 0.9 * fade };
+    return { weight: 2 + 6*w, opacity: 0.9 };
   }
 
-  if (key === "hotspots") {
+  if (key === "hotspots"){
     const r = clamp01(v ?? 0.3);
-    return {
-      weight: 1,
-      color: "#ffffff",
-      opacity: 0.25 * fade,
-      fillColor: riskColor(r),
-      fillOpacity: 0.45 * fade
-    };
+    return { weight: 1, color: "#fff", opacity: 0.25, fillColor: riskColor(r), fillOpacity: 0.45 };
   }
 
   const p = clamp01(v ?? 0.3);
-  return {
-    weight: 1,
-    color: "#ffffff",
-    opacity: 0.18 * fade,
-    fillColor: presenceColor(p),
-    fillOpacity: 0.35 * fade
-  };
+  return { weight: 1, color: "#fff", opacity: 0.18, fillColor: presenceColor(p), fillOpacity: 0.35 };
 }
 
-function popupTextFor(key, feature) {
+function popupFor(key, feature){
   const props = feature?.properties || {};
+  if (key === "detections"){
+    const conf = props.conf ?? null;
+    const herd = props.herd_id ?? "n/a";
+    const shown = (conf === null) ? "n/a" : Number(conf).toFixed(2);
+    return `<b>Detection</b><br/>conf: ${shown}<br/>herd: ${herd}`;
+  }
   const cfg = LAYER_CONFIG[key];
   const v = props[cfg.valueProp];
-
-  const label =
-    key === "presence" ? "Presence (p)" :
-    key === "hotspots" ? "Risk (r)" :
-    key === "corridors" ? "Corridor weight (w)" :
-    key;
-
   const shown = (v === undefined || v === null) ? "n/a" : Number(v).toFixed(2);
-  return `<b>${label}</b>: ${shown}`;
+  return `<b>${key}</b>: ${shown}`;
 }
 
-async function loadGeoJSONLayer(key, url, leadDays) {
+async function loadLayer(key){
+  const cfg = LAYER_CONFIG[key];
+  const url = `${DATA_ROOT}/${cfg.file}`;
   const geo = await fetchJSON(url);
-  if (!geo) return null;
+  if (!geo) return { ok:false, url };
 
-  return L.geoJSON(geo, {
-    style: (feature) => geojsonStyleFor(key, feature, leadDays),
-    onEachFeature: (feature, layerObj) => layerObj.bindPopup(popupTextFor(key, feature))
+  if (cfg.type === "point"){
+    const layer = L.geoJSON(geo, {
+      pointToLayer: (feature, latlng) => {
+        const c = clamp01(feature?.properties?.conf ?? 0.5);
+        return L.circleMarker(latlng, {
+          radius: 3 + 6*c,
+          color: "#0b1220",
+          weight: 1,
+          fillColor: detColor(c),
+          fillOpacity: 0.85,
+          opacity: 0.55
+        });
+      },
+      onEachFeature: (feature, layerObj) => layerObj.bindPopup(popupFor(key, feature))
+    });
+    return { ok:true, layer, url };
+  }
+
+  const layer = L.geoJSON(geo, {
+    style: (feature) => styleFor(key, feature),
+    onEachFeature: (feature, layerObj) => layerObj.bindPopup(popupFor(key, feature))
   });
+  return { ok:true, layer, url };
 }
 
-function setDateControls() {
-  const current = dateSelect.value;
-  const idx = availableDates.indexOf(current);
-  prevBtn.disabled = idx <= 0;
-  nextBtn.disabled = idx < 0 || idx >= availableDates.length - 1;
+async function refreshDataLayers(){
+  setStatus("Loading data/latest…");
 
-  const lead = baseDate ? diffDays(current, baseDate) : 0;
-  leadTag.textContent = lead >= 0 ? `Day +${lead}` : `Day ${lead}`;
-}
-
-async function refreshLayers() {
-  const dateStr = dateSelect.value;
-  if (!dateStr) return;
-
-  const lead = baseDate ? diffDays(dateStr, baseDate) : 0;
-  setStatus(`Loading ${dateStr} (Day +${Math.max(0, lead)})…`);
-
-  // Remove old layers
-  Object.values(layersOnMap).forEach((layer) => map.removeLayer(layer));
-  for (const k of Object.keys(layersOnMap)) delete layersOnMap[k];
+  // remove existing
+  for (const k of Object.keys(layersOnMap)){
+    map.removeLayer(layersOnMap[k]);
+    delete layersOnMap[k];
+  }
 
   let loaded = 0;
+  const missing = [];
   const bounds = [];
 
-  for (const cb of checkboxes) {
+  for (const cb of layerChecks){
     const key = cb.dataset.layer;
     if (!cb.checked) continue;
 
-    const cfg = LAYER_CONFIG[key];
-    const url = `data/${dateStr}/${cfg.file}`;
-    const layer = await loadGeoJSONLayer(key, url, lead);
-
-    if (layer) {
-      layer.addTo(map);
-      layersOnMap[key] = layer;
-      loaded++;
-
-      try {
-        const b = layer.getBounds?.();
-        if (b && b.isValid()) bounds.push(b);
-      } catch {}
+    const res = await loadLayer(key);
+    if (!res.ok){
+      missing.push(`${key} (missing: ${res.url})`);
+      continue;
     }
+
+    res.layer.addTo(map);
+    layersOnMap[key] = res.layer;
+    loaded++;
+
+    try{
+      const b = res.layer.getBounds?.();
+      if (b && b.isValid()) bounds.push(b);
+    }catch{}
   }
 
-  if (bounds.length > 0) {
+  if (bounds.length > 0){
     const combined = bounds.reduce((acc, b) => acc.extend(b), bounds[0]);
     map.fitBounds(combined.pad(0.15));
   }
 
-  // force resize again after fitting bounds
   setTimeout(() => map.invalidateSize(), 150);
 
-  // meta
-  const meta = await fetchJSON(`data/${dateStr}/meta.json`);
-  if (loaded === 0) {
-    setStatus(`No layers found for ${dateStr}. Add files in /data/${dateStr}/`);
-  } else if (meta?.updated) {
-    const extra = meta?.notes ? ` • ${meta.notes}` : "";
-    setStatus(`Loaded ${loaded} layer(s) for ${dateStr}. Updated: ${meta.updated}${extra}`);
+  if (loaded === 0){
+    setStatus(
+      missing.length
+        ? `No GeoJSON layers loaded. Missing:\n- ${missing.join("\n- ")}`
+        : "No GeoJSON layers loaded (none selected)."
+    );
   } else {
-    setStatus(`Loaded ${loaded} layer(s) for ${dateStr}.`);
+    setStatus(
+      missing.length
+        ? `Loaded ${loaded} layer(s). Missing:\n- ${missing.join("\n- ")}`
+        : `Loaded ${loaded} layer(s) from data/latest.`
+    );
   }
 }
 
-async function initDates() {
-  const indexData = await fetchJSON("data/index.json");
-  if (!indexData?.dates?.length) {
-    setStatus("Missing data/index.json or no dates listed.");
-    return;
-  }
-
-  availableDates = indexData.dates.slice().sort();
-  baseDate = indexData.latest || availableDates[availableDates.length - 1];
-
-  dateSelect.innerHTML = "";
-  for (const d of availableDates) {
-    const opt = document.createElement("option");
-    opt.value = d;
-    opt.textContent = d;
-    dateSelect.appendChild(opt);
-  }
-
-  dateSelect.value = baseDate;
-
-  setDateControls();
-  await refreshLayers();
+// ---------- NDVI controls ----------
+function setNdviOpacityFromUI(){
+  const v = Number(ndviOpacity.value);
+  const op = clamp01(v / 100);
+  ndviLayer.setOpacity(op);
+  ndviOpacityLabel.textContent = `${v}%`;
 }
 
-// UI wiring
-dateSelect.addEventListener("change", async () => {
-  setDateControls();
-  await refreshLayers();
+ndviToggle.addEventListener("change", () => {
+  if (ndviToggle.checked) ndviLayer.addTo(map);
+  else map.removeLayer(ndviLayer);
 });
 
-prevBtn.addEventListener("click", async () => {
-  const idx = availableDates.indexOf(dateSelect.value);
-  if (idx > 0) dateSelect.value = availableDates[idx - 1];
-  setDateControls();
-  await refreshLayers();
-});
+ndviOpacity.addEventListener("input", setNdviOpacityFromUI);
+setNdviOpacityFromUI();
 
-nextBtn.addEventListener("click", async () => {
-  const idx = availableDates.indexOf(dateSelect.value);
-  if (idx >= 0 && idx < availableDates.length - 1) dateSelect.value = availableDates[idx + 1];
-  setDateControls();
-  await refreshLayers();
-});
-
-checkboxes.forEach((cb) => cb.addEventListener("change", refreshLayers));
-
-// ---------- Legend ----------
-const legend = L.control({ position: "bottomright" });
-legend.onAdd = function () {
-  const div = L.DomUtil.create("div", "legend");
-  div.innerHTML = `
-    <div class="legendTitle">Legend</div>
-
-    <div class="legendBlock">
-      <div class="legendLabel">Presence (p)</div>
-      <div class="legendRow"><span class="swatch" style="background:${presenceColor(0.1)}"></span><span>0–0.2</span></div>
-      <div class="legendRow"><span class="swatch" style="background:${presenceColor(0.3)}"></span><span>0.2–0.4</span></div>
-      <div class="legendRow"><span class="swatch" style="background:${presenceColor(0.5)}"></span><span>0.4–0.6</span></div>
-      <div class="legendRow"><span class="swatch" style="background:${presenceColor(0.7)}"></span><span>0.6–0.8</span></div>
-      <div class="legendRow"><span class="swatch" style="background:${presenceColor(0.9)}"></span><span>0.8–1.0</span></div>
-    </div>
-
-    <div class="legendBlock">
-      <div class="legendLabel">Risk (r)</div>
-      <div class="legendRow"><span class="swatch" style="background:${riskColor(0.1)}"></span><span>0–0.2</span></div>
-      <div class="legendRow"><span class="swatch" style="background:${riskColor(0.3)}"></span><span>0.2–0.4</span></div>
-      <div class="legendRow"><span class="swatch" style="background:${riskColor(0.5)}"></span><span>0.4–0.6</span></div>
-      <div class="legendRow"><span class="swatch" style="background:${riskColor(0.7)}"></span><span>0.6–0.8</span></div>
-      <div class="legendRow"><span class="swatch" style="background:${riskColor(0.9)}"></span><span>0.8–1.0</span></div>
-    </div>
-
-    <div class="legendNote">UN INTERNAL • Aggregated surfaces only</div>
-  `;
-  return div;
-};
-legend.addTo(map);
+// ---------- Data controls ----------
+layerChecks.forEach((cb) => cb.addEventListener("change", refreshDataLayers));
+reloadBtn.addEventListener("click", refreshDataLayers);
 
 // Start
-initDates();
+setStatus("Ready. Toggle NDVI or reload data/latest.");
+refreshDataLayers();
