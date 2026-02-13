@@ -1,0 +1,13 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "label": "Sample presence (placeholder)" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[30.1,7.2],[30.9,7.2],[30.9,7.9],[30.1,7.9],[30.1,7.2]]]
+      }
+    }
+  ]
+}
