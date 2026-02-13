@@ -36,6 +36,9 @@ const satellite = L.tileLayer(
 
 street.addTo(map);
 
+// IMPORTANT: forces Leaflet to re-measure the map container after layout settles
+setTimeout(() => map.invalidateSize(), 200);
+
 L.control.layers(
   { Street: street, Satellite: satellite },
   null,
@@ -61,7 +64,7 @@ function riskColor(r) {
   return "#fee0d2";
 }
 
-// ---------- Layer config (expects GeoJSON at /data/<date>/<file>) ----------
+// ---------- Layer config ----------
 const LAYER_CONFIG = {
   grazing:   { file: "grazing.geojson",   type: "poly", valueProp: "g" },     // optional 0..1
   water:     { file: "water.geojson",     type: "poly", valueProp: "w" },     // optional 0..1
@@ -71,11 +74,9 @@ const LAYER_CONFIG = {
 };
 
 const layersOnMap = {};
-let indexData = null;          // data/index.json
 let availableDates = [];
-let baseDate = null;           // Day 0 = latest available imagery date (index.latest)
+let baseDate = null;  // Day 0 = index.latest
 
-// fetch helper
 async function fetchJSON(url) {
   try {
     const res = await fetch(url, { cache: "no-store" });
@@ -86,7 +87,7 @@ async function fetchJSON(url) {
   }
 }
 
-// Decreasing-confidence fade as lead time increases (0..30 days)
+// Decreasing-confidence fade (0..30 days)
 function leadFade(leadDays) {
   const f = 1 - (leadDays / 46);   // 0->1.0, 30->~0.35
   return Math.max(0.35, Math.min(1.0, f));
@@ -99,13 +100,11 @@ function geojsonStyleFor(key, feature, leadDays) {
 
   const fade = leadFade(Math.max(0, leadDays));
 
-  // Lines
   if (cfg.type === "line") {
     const w = clamp01(v ?? 0.5);
     return { weight: (2 + 6 * w), opacity: 0.9 * fade };
   }
 
-  // Polygons
   if (key === "hotspots") {
     const r = clamp01(v ?? 0.3);
     return {
@@ -117,7 +116,6 @@ function geojsonStyleFor(key, feature, leadDays) {
     };
   }
 
-  // presence/grazing/water default look
   const p = clamp01(v ?? 0.3);
   return {
     weight: 1,
@@ -194,18 +192,18 @@ async function refreshLayers() {
         const b = layer.getBounds?.();
         if (b && b.isValid()) bounds.push(b);
       } catch {}
-    } else {
-      console.log(`No data at ${url}`);
     }
   }
 
-  // Fit view if something loaded
   if (bounds.length > 0) {
     const combined = bounds.reduce((acc, b) => acc.extend(b), bounds[0]);
     map.fitBounds(combined.pad(0.15));
   }
 
-  // meta.json (optional but recommended)
+  // force resize again after fitting bounds
+  setTimeout(() => map.invalidateSize(), 150);
+
+  // meta
   const meta = await fetchJSON(`data/${dateStr}/meta.json`);
   if (loaded === 0) {
     setStatus(`No layers found for ${dateStr}. Add files in /data/${dateStr}/`);
@@ -218,16 +216,15 @@ async function refreshLayers() {
 }
 
 async function initDates() {
-  indexData = await fetchJSON("data/index.json");
+  const indexData = await fetchJSON("data/index.json");
   if (!indexData?.dates?.length) {
     setStatus("Missing data/index.json or no dates listed.");
     return;
   }
 
-  availableDates = indexData.dates.slice().sort(); // ascending
+  availableDates = indexData.dates.slice().sort();
   baseDate = indexData.latest || availableDates[availableDates.length - 1];
 
-  // Populate dropdown
   dateSelect.innerHTML = "";
   for (const d of availableDates) {
     const opt = document.createElement("option");
@@ -236,8 +233,8 @@ async function initDates() {
     dateSelect.appendChild(opt);
   }
 
-  // Default to latest
   dateSelect.value = baseDate;
+
   setDateControls();
   await refreshLayers();
 }
