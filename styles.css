@@ -20,8 +20,7 @@ html, body{
 .app{
   height: 100vh;
   display: grid;
-  grid-template-columns: 360px 1fr;
-  grid-template-rows: 1fr;
+  grid-template-columns: 380px 1fr;
 }
 
 .panel, .mapWrap{ min-height: 0; }
@@ -41,7 +40,7 @@ html, body{
   background: rgba(17,26,46,.55);
 }
 
-.title{ font-size: 18px; font-weight: 900; letter-spacing: .2px; }
+.title{ font-size: 18px; font-weight: 900; }
 .subtitle{ margin-top: 4px; font-size: 12px; color: var(--muted); }
 
 .controls{
@@ -58,7 +57,6 @@ html, body{
   font-size: 12px;
   font-weight: 900;
   color: rgba(231,238,252,.86);
-  letter-spacing: .35px;
   text-transform: uppercase;
 }
 
@@ -105,7 +103,7 @@ code{
   font-weight: 800;
 }
 
-input[type="range"]{ width: 160px; }
+input[type="range"]{ width: 170px; }
 
 .pill{
   font-size: 12px;
@@ -133,6 +131,19 @@ input[type="range"]{ width: 160px; }
   background: rgba(0,0,0,.18);
   font-size: 12px;
   color: rgba(231,238,252,.86);
+  white-space: pre-wrap;
+}
+
+.chartCard{
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 16px;
+  padding: 10px;
+  background: rgba(0,0,0,.14);
+}
+.chartStats{
+  margin-top: 8px;
+  font-size: 12px;
+  color: rgba(231,238,252,.80);
   line-height: 1.35;
 }
 
@@ -143,7 +154,7 @@ input[type="range"]{ width: 160px; }
 @media (max-width: 900px){
   .app{
     grid-template-columns: 1fr;
-    grid-template-rows: 360px 1fr;
+    grid-template-rows: 420px 1fr;
   }
   .panel{
     border-right:none;
