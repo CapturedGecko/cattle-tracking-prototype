@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Cattle Tracking (UN Internal Prototype)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Cattle Tracking Prototype</title>
 
   <!-- Leaflet -->
   <link
@@ -12,81 +12,74 @@
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
     crossorigin=""
   />
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <div class="app">
+    <aside class="panel">
+      <div class="panelHeader">
+        <div class="title">Cattle Tracking Prototype</div>
+        <div class="subtitle">UN INTERNAL • Aggregated surfaces only</div>
+      </div>
+
+      <div class="controls">
+        <div class="row">
+          <label class="label" for="dateSelect">Date</label>
+          <button id="prevBtn" class="navBtn" type="button" aria-label="Previous day">←</button>
+          <select id="dateSelect"></select>
+          <button id="nextBtn" class="navBtn" type="button" aria-label="Next day">→</button>
+          <span id="leadTag" class="leadTag">Day +0</span>
+        </div>
+
+        <div class="sectionTitle">Layers</div>
+
+        <label class="check">
+          <input type="checkbox" data-layer="presence" checked />
+          <span>Presence likelihood</span>
+        </label>
+
+        <label class="check">
+          <input type="checkbox" data-layer="corridors" checked />
+          <span>Movement corridors</span>
+        </label>
+
+        <label class="check">
+          <input type="checkbox" data-layer="hotspots" checked />
+          <span>Conflict risk hotspots</span>
+        </label>
+
+        <label class="check">
+          <input type="checkbox" data-layer="grazing" />
+          <span>Grazing viability</span>
+        </label>
+
+        <label class="check">
+          <input type="checkbox" data-layer="water" />
+          <span>Water access</span>
+        </label>
+
+        <div class="hint">
+          Tip: Dates come from <code>data/index.json</code>. Each date loads files from
+          <code>data/YYYY-MM-DD/</code>.
+        </div>
+
+        <div id="status" class="status">Loading…</div>
+      </div>
+    </aside>
+
+    <main class="mapWrap">
+      <div id="map"></div>
+    </main>
+  </div>
+
+  <!-- Leaflet JS -->
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
     crossorigin=""
   ></script>
-
-  <link rel="stylesheet" href="styles.css" />
-</head>
-<body>
-  <header class="topbar">
-    <div class="left">
-      <div class="title">Cattle Tracking</div>
-      <div class="badge">UN INTERNAL • PROTOTYPE</div>
-    </div>
-
-    <div class="right">
-      <label class="label" for="weekSelect">Forecast:</label>
-      <select id="weekSelect">
-        <option value="week0">Week 0 (latest)</option>
-        <option value="week1">Week 1</option>
-        <option value="week2">Week 2</option>
-        <option value="week3">Week 3</option>
-        <option value="week4">Week 4</option>
-      </select>
-    </div>
-  </header>
-
-  <main class="layout">
-    <aside class="panel">
-      <h2>Layers</h2>
-
-      <label class="check">
-        <input type="checkbox" data-layer="grazing" checked />
-        Grazing viability
-      </label>
-
-      <label class="check">
-        <input type="checkbox" data-layer="water" checked />
-        Water access
-      </label>
-
-      <label class="check">
-        <input type="checkbox" data-layer="presence" checked />
-        Presence likelihood
-      </label>
-
-      <label class="check">
-        <input type="checkbox" data-layer="corridors" checked />
-        Movement corridors
-      </label>
-
-      <label class="check">
-        <input type="checkbox" data-layer="hotspots" checked />
-        Convergence / hotspots
-      </label>
-
-      <hr />
-
-      <h2>Notes</h2>
-      <p class="muted">
-        This prototype loads layers from <code>/data/&lt;week&gt;/&lt;layer&gt;.geojson</code>.
-        If a file isn’t there yet, it will just say “No data found.”
-      </p>
-
-      <div class="disclaimer">
-        <b>Safety:</b> Display aggregated surfaces/polygons only. Avoid exact points / identifiable locations.
-      </div>
-
-      <div id="status" class="status muted">Ready.</div>
-    </aside>
-
-    <section class="mapWrap">
-      <div id="map"></div>
-    </section>
-  </main>
 
   <script src="app.js"></script>
 </body>
