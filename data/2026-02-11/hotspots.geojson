@@ -1,0 +1,13 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "risk": 0.62, "note": "Demo convergence hotspot" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[30.48,7.35],[30.74,7.35],[30.74,7.58],[30.48,7.58],[30.48,7.35]]]
+      }
+    }
+  ]
+}
