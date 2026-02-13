@@ -1,0 +1,13 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "w": 0.82, "note": "Demo movement corridor" },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [[30.55,7.55],[31.05,7.85]]
+      }
+    }
+  ]
+}
