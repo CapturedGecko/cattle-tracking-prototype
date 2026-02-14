@@ -24,6 +24,11 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -U inference-sdk
+      - name: Fetch Sentinel-2 preview image
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+          python scripts/fetch_sentinel2_thumbnail.py
 
       - name: Run inference script
         env:
