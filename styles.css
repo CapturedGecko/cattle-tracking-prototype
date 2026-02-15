@@ -1,10 +1,7 @@
 :root{
   --bg:#0b1220;
-  --panel:#0e1a2f;
-  --card:#0f213a;
   --text:#e5e7eb;
   --muted:#aab4c6;
-  --accent:#60a5fa;
   --border:rgba(255,255,255,0.08);
 }
 
@@ -29,7 +26,6 @@ html, body{
   min-width:320px;
   max-width:420px;
   padding:14px;
-  background:linear-gradient(180deg, #0b1220 0%, #0b1220 60%, #09101d 100%);
   border-right:1px solid var(--border);
   overflow:auto;
 }
@@ -38,7 +34,7 @@ html, body{
   background:rgba(255,255,255,0.03);
   border:1px solid var(--border);
   border-radius:18px;
-  padding:14px 14px;
+  padding:14px;
   margin-bottom:12px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.25);
 }
@@ -71,7 +67,6 @@ h2{
 
 .btn{
   width:100%;
-  margin-top:10px;
   padding:10px 12px;
   border-radius:12px;
   border:1px solid var(--border);
@@ -96,6 +91,7 @@ h2{
   justify-content:space-between;
   align-items:center;
   margin-top:10px;
+  gap:10px;
 }
 .label{ color:var(--muted); font-size:12px; }
 .value{ color:var(--text); font-size:12px; }
@@ -103,13 +99,6 @@ h2{
 input[type="range"]{
   width:100%;
   margin-top:8px;
-}
-
-.hint{
-  margin-top:10px;
-  color:var(--muted);
-  font-size:12px;
-  line-height:1.35;
 }
 
 .mapwrap{
