@@ -18,25 +18,27 @@ function clamp01(x){
 }
 
 // ---------- Map ----------
+// ---------- Map ----------
 const map = L.map("map", {
   zoomControl: true,
-  maxZoom: 17 // prevents “map data not yet available” when people zoom into nothing
+  maxZoom: 20,      // allow zooming further in
+  minZoom: 2
 }).setView([7.5, 30.5], 6);
-
-// Panes (lets us control overlay opacity reliably)
-map.createPane("ndviPane");
-map.getPane("ndviPane").style.zIndex = 350;
-map.getPane("ndviPane").style.pointerEvents = "none";
 
 // Base maps
 const street = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  maxZoom: 19,
-  attribution: "&copy; OpenStreetMap contributors"
+  attribution: "&copy; OpenStreetMap contributors",
+  maxZoom: 20,        // allow over-zoom
+  maxNativeZoom: 19   // OSM actually has tiles up to 19
 });
 
 const satellite = L.tileLayer(
   "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-  { maxZoom: 17, attribution: "Tiles &copy; Esri" }
+  {
+    attribution: "Tiles &copy; Esri",
+    maxZoom: 20,        // allow over-zoom
+    maxNativeZoom: 18   // Esri often tops out at 18 (prevents missing tiles)
+  }
 );
 
 street.addTo(map);
