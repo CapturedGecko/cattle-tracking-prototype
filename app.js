@@ -18,19 +18,56 @@ function clamp01(x){
 }
 
 // ---------- Map ----------
-// ---------- Map ----------
 const map = L.map("map", {
   zoomControl: true,
-  maxZoom: 20,      // allow zooming further in
+  maxZoom: 20,  // user can zoom further
   minZoom: 2
 }).setView([7.5, 30.5], 6);
 
 // Base maps
 const street = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution: "&copy; OpenStreetMap contributors",
-  maxZoom: 20,        // allow over-zoom
-  maxNativeZoom: 19   // OSM actually has tiles up to 19
+  maxZoom: 20,
+  maxNativeZoom: 19
 });
+
+const satellite = L.tileLayer(
+  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  {
+    attribution: "Tiles &copy; Esri",
+    maxZoom: 20,         // allow zooming
+    maxNativeZoom: 18,   // BUT never request tiles beyond 18
+    errorTileUrl: "data:image/gif;base64,R0lGODlhAQABAAAAACw=" // transparent 1x1 so you don't see ugly errors
+  }
+);
+
+street.addTo(map);
+
+// Layer control
+L.control.layers(
+  { Street: street, Satellite: satellite },
+  {},
+  { position: "topright" }
+).addTo(map);
+
+// ---- Optional: if Satellite is active and user zooms past native zoom, auto-switch to Street ----
+const SAT_MAX_NATIVE = 18;
+
+function isLayerOn(layer) {
+  return map.hasLayer(layer);
+}
+
+map.on("zoomend", () => {
+  if (isLayerOn(satellite) && map.getZoom() > SAT_MAX_NATIVE) {
+    // either clamp zoom:
+    map.setZoom(SAT_MAX_NATIVE);
+
+    // OR instead of clamping, auto-switch basemap:
+    // map.removeLayer(satellite);
+    // street.addTo(map);
+  }
+});
+
 
 const satellite = L.tileLayer(
   "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
