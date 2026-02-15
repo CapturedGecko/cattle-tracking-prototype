@@ -3,7 +3,7 @@ import json
 import os
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from inference_sdk import InferenceHTTPClient
 
@@ -17,19 +17,17 @@ def ensure_dirs():
     INPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def save_json(path: Path, obj):
+def save_json(path: Path, obj: Any):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(obj, indent=2), encoding="utf-8")
 
 
-def load_json(path: Path) -> Optional[dict]:
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return None
+def utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
-def find_image():
+def find_image() -> Optional[Path]:
+    # You must put a real test image here: inputs/test.jpg (or .png)
     for name in ["test.jpg", "test.jpeg", "test.png"]:
         p = INPUT_DIR / name
         if p.exists():
@@ -37,14 +35,14 @@ def find_image():
     return None
 
 
-def utc_now():
-    return datetime.now(timezone.utc).isoformat()
+def empty_geojson():
+    return {"type": "FeatureCollection", "features": []}
 
 
 def collect_predictions(obj: Any) -> List[dict]:
     """
-    Roboflow workflow outputs vary by block. This finds any nested dict with key 'predictions'
-    that is a list[dict].
+    Roboflow workflow outputs vary a lot. This walks the response and collects
+    every dict inside any list called 'predictions'.
     """
     found: List[dict] = []
 
@@ -64,10 +62,10 @@ def collect_predictions(obj: Any) -> List[dict]:
     return found
 
 
-def find_base64_jpeg(obj: Any) -> Optional[str]:
+def find_base64_image(obj: Any) -> Optional[str]:
     """
-    Your output contains a key with a base64 JPEG string (starts with /9j/).
-    We'll find the first long-ish base64 string that looks like a jpg/png and save it.
+    Your workflow returns a base64 JPEG string that starts with /9j/
+    (or base64 PNG that starts with iVBORw0). We save it to annotated.jpg.
     """
     candidate = None
 
@@ -90,152 +88,79 @@ def find_base64_jpeg(obj: Any) -> Optional[str]:
     return candidate
 
 
-def bbox_center(bbox: List[float]) -> Tuple[float, float]:
-    minlon, minlat, maxlon, maxlat = bbox
-    return (minlon + maxlon) / 2.0, (minlat + maxlat) / 2.0
-
-
-def pixel_to_lonlat(x_px: float, y_px: float, w: int, h: int, bbox: List[float]) -> Tuple[float, float]:
-    """
-    Assumes the image represents bbox_wgs84 with (0,0) at top-left.
-    Roboflow usually gives x,y as pixel centers in image coordinates.
-    """
-    minlon, minlat, maxlon, maxlat = bbox
-    lon = minlon + (x_px / max(1, w)) * (maxlon - minlon)
-    lat = maxlat - (y_px / max(1, h)) * (maxlat - minlat)
-    return lon, lat
-
-
-def make_geojson_points(preds: List[dict], ingest: Optional[dict]) -> Dict[str, Any]:
-    """
-    Convert predictions to GeoJSON points if we know bbox + image size.
-    If we can't, returns empty FC.
-    """
-    fc = {"type": "FeatureCollection", "features": []}
-
-    if not ingest:
-        return fc
-
-    bbox = ingest.get("bbox_wgs84")
-    img_px = ingest.get("image_px", {})
-    w = int(img_px.get("width", 0) or 0)
-    h = int(img_px.get("height", 0) or 0)
-
-    if not (isinstance(bbox, list) and len(bbox) == 4 and w > 0 and h > 0):
-        return fc
-
-    for p in preds:
-        # common keys: x,y,width,height,confidence,class
-        x = p.get("x", None)
-        y = p.get("y", None)
-        conf = p.get("confidence", p.get("conf", None))
-        cls = p.get("class", p.get("label", None))
-
-        if isinstance(x, (int, float)) and isinstance(y, (int, float)):
-            lon, lat = pixel_to_lonlat(float(x), float(y), w, h, bbox)
-            fc["features"].append(
-                {
-                    "type": "Feature",
-                    "properties": {
-                        "source": "roboflow",
-                        "class": cls,
-                        "conf": conf,
-                        "x_px": x,
-                        "y_px": y,
-                    },
-                    "geometry": {"type": "Point", "coordinates": [lon, lat]},
-                }
-            )
-
-    return fc
-
-
 def main():
     ensure_dirs()
 
-    api_key = os.environ.get("ROBOFLOW_API_KEY")
-    workspace = os.environ.get("ROBOFLOW_WORKSPACE")
-    workflow_id = os.environ.get("ROBOFLOW_WORKFLOW_ID")
+    api_key = (os.environ.get("ROBOFLOW_API_KEY") or "").strip()
+    workspace = (os.environ.get("ROBOFLOW_WORKSPACE") or "").strip()
+    workflow_id = (os.environ.get("ROBOFLOW_WORKFLOW_ID") or "").strip()
+
+    # Always keep these files present so the site never crashes
+    save_json(DATA_LATEST / "detections.geojson", empty_geojson())
 
     if not api_key or not workspace or not workflow_id:
-        raise RuntimeError("Missing env vars. Need ROBOFLOW_API_KEY, ROBOFLOW_WORKSPACE, ROBOFLOW_WORKFLOW_ID")
+        meta = {
+            "status": "missing_env",
+            "message": "Missing env vars: ROBOFLOW_API_KEY, ROBOFLOW_WORKSPACE, ROBOFLOW_WORKFLOW_ID",
+            "have_api_key": bool(api_key),
+            "have_workspace": bool(workspace),
+            "have_workflow_id": bool(workflow_id),
+            "updated_utc": utc_now(),
+        }
+        save_json(DATA_LATEST / "meta.json", meta)
+        raise SystemExit("Missing required secrets.")
 
     img_path = find_image()
     if not img_path:
         meta = {
             "status": "no_input_image",
-            "message": "Add an image at inputs/test.jpg (or .png) to run inference.",
+            "message": "Upload a test image to inputs/test.jpg (or test.png) then rerun.",
             "updated_utc": utc_now(),
         }
         save_json(DATA_LATEST / "meta.json", meta)
-        save_json(DATA_LATEST / "detections.geojson", {"type": "FeatureCollection", "features": []})
         print("No input image found.")
         return
 
-    ingest = load_json(DATA_LATEST / "ingest_meta.json")
-
-    client = InferenceHTTPClient(api_url="https://serverless.roboflow.com", api_key=api_key)
+    client = InferenceHTTPClient(
+        api_url="https://serverless.roboflow.com",
+        api_key=api_key
+    )
 
     result = client.run_workflow(
         workspace_name=workspace,
         workflow_id=workflow_id,
         images={"image": str(img_path)},
-        use_cache=True,
+        use_cache=True
     )
 
+    # Save raw output for debugging
     save_json(DATA_LATEST / "raw_inference.json", result)
 
-    # Save any base64 image returned by workflow (yours has one)
-    b64 = find_base64_jpeg(result)
+    # Save any base64 annotated image if present
+    b64 = find_base64_image(result)
     if b64:
-        out_img = DATA_LATEST / "annotated.jpg"
-        out_img.write_bytes(base64.b64decode(b64))
-        print(f"Wrote {out_img}")
-
-    preds = collect_predictions(result)
-
-    # If predictions are empty, still drop a center marker with any count-like fields
-    geo = make_geojson_points(preds, ingest)
-    if len(geo["features"]) == 0 and isinstance(ingest, dict) and isinstance(ingest.get("bbox_wgs84"), list):
-        lon, lat = bbox_center(ingest["bbox_wgs84"])
-
-        # pull any top-level numeric outputs (like Cattle_Group)
-        count_like = {}
         try:
-            if isinstance(result, list) and result and isinstance(result[0], dict):
-                for k, v in result[0].items():
-                    if isinstance(v, (int, float)) and k.lower().endswith(("count", "group")):
-                        count_like[k] = v
-                    if k == "Cattle_Group" and isinstance(v, (int, float)):
-                        count_like[k] = v
+            (DATA_LATEST / "annotated.jpg").write_bytes(base64.b64decode(b64))
         except Exception:
             pass
 
-        geo["features"].append(
-            {
-                "type": "Feature",
-                "properties": {
-                    "source": "roboflow_fallback",
-                    "note": "No box predictions found; showing AOI center marker instead.",
-                    **count_like,
-                },
-                "geometry": {"type": "Point", "coordinates": [lon, lat]},
-            }
-        )
+    preds = collect_predictions(result)
 
-    save_json(DATA_LATEST / "detections.geojson", geo)
-
+    # For now: we are NOT converting to lat/lon. So we only record counts + prediction count.
+    # (Map points come later once you have georeferencing.)
     meta = {
         "status": "ok",
-        "input_image": str(img_path.relative_to(ROOT)),
         "updated_utc": utc_now(),
+        "input_image": str(img_path.relative_to(ROOT)),
         "predictions_found": len(preds),
-        "geojson_points": len(geo.get("features", [])),
-        "note": "raw_inference.json saved. detections.geojson generated (or fallback center marker).",
+        "note": "raw_inference.json saved. detections.geojson stays empty until georeferencing is implemented."
     }
     save_json(DATA_LATEST / "meta.json", meta)
 
-    print("Saved data/latest/raw_inference.json + meta.json + detections.geojson")
+    # Keep empty GeoJSON (prevents breaking the map)
+    save_json(DATA_LATEST / "detections.geojson", empty_geojson())
+
+    print("Saved data/latest/raw_inference.json + meta.json (+ annotated.jpg if present).")
 
 
 if __name__ == "__main__":
