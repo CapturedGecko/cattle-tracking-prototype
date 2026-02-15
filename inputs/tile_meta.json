@@ -1,0 +1,9 @@
+{
+  "tile_id": "test_tile",
+  "bbox_wgs84": {
+    "west": 30.1,
+    "south": 7.2,
+    "east": 30.9,
+    "north": 7.9
+  }
+}
