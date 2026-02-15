@@ -20,7 +20,7 @@ function clamp01(x){
 // ---------- Map ----------
 const map = L.map("map", {
   zoomControl: true,
-  maxZoom: 18 // prevents “map data not yet available” when people zoom into nothing
+  maxZoom: 17 // prevents “map data not yet available” when people zoom into nothing
 }).setView([7.5, 30.5], 6);
 
 // Panes (lets us control overlay opacity reliably)
@@ -36,7 +36,7 @@ const street = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
 
 const satellite = L.tileLayer(
   "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-  { maxZoom: 18, attribution: "Tiles &copy; Esri" }
+  { maxZoom: 17, attribution: "Tiles &copy; Esri" }
 );
 
 street.addTo(map);
