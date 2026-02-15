@@ -1,5 +1,8 @@
 {
-  "status": "no_input_image",
-  "message": "Add an image at inputs/test.jpg (or .png) to run inference.",
-  "updated_utc": "2026-02-14T22:52:00.612057+00:00"
+  "status": "ok",
+  "input_image": "inputs/test.jpg",
+  "workspace": "tks-drone-replicate-12",
+  "workflow_id": "custom-workflow",
+  "updated_utc": "2026-02-15T03:06:06.059351+00:00",
+  "note": "raw_inference.json saved. detections.geojson stays empty until we add georeferencing (lat/lon)."
 }
