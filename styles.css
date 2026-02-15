@@ -1,163 +1,64 @@
-:root{
-  --bg: #0b1220;
-  --panel: rgba(6,10,20,.86);
-  --card: rgba(17,26,46,.38);
-  --border: rgba(255,255,255,.14);
-  --text: #e7eefc;
-  --muted: rgba(231,238,252,.70);
-}
-
-*{ box-sizing: border-box; }
-
-html, body{
+html, body {
   height: 100%;
   margin: 0;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-  background: var(--bg);
-  color: var(--text);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: #0b1220;
+  color: #e5e7eb;
 }
 
-.app{
-  height: 100vh;
-  display: grid;
-  grid-template-columns: 380px 1fr;
-}
-
-.panel, .mapWrap{ min-height: 0; }
-
-.panel{
-  border-right: 1px solid var(--border);
-  background: var(--panel);
-  backdrop-filter: blur(8px);
-  padding: 14px;
-  overflow: auto;
-}
-
-.panelHeader{
-  padding: 10px 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: rgba(17,26,46,.55);
-}
-
-.title{ font-size: 18px; font-weight: 900; }
-.subtitle{ margin-top: 4px; font-size: 12px; color: var(--muted); }
-
-.controls{
-  margin-top: 12px;
-  padding: 12px 10px;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: var(--card);
-}
-
-.sectionTitle{
-  margin-top: 14px;
-  margin-bottom: 6px;
-  font-size: 12px;
-  font-weight: 900;
-  color: rgba(231,238,252,.86);
-  text-transform: uppercase;
-}
-
-.hint{
-  font-size: 12px;
-  color: rgba(231,238,252,.70);
-  line-height: 1.35;
-  margin-bottom: 8px;
-}
-
-code{
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 11px;
-  padding: 1px 5px;
-  border-radius: 8px;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(0,0,0,.18);
-}
-
-.check{
+.topbar {
   display: flex;
-  gap: 10px;
+  justify-content: space-between;
   align-items: center;
-  padding: 8px 6px;
-  border-radius: 12px;
-  cursor: pointer;
-  user-select: none;
+  padding: 12px 16px;
+  background: #0f172a;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
-.check:hover{ background: rgba(255,255,255,.04); }
-.check input{ width: 16px; height: 16px; }
-
-.row{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  flex-wrap: wrap;
-  margin-top: 6px;
+.brand {
+  font-weight: 700;
 }
 
-.label{
+.status {
   font-size: 12px;
-  color: var(--muted);
-  font-weight: 800;
+  opacity: 0.9;
+  white-space: pre-line;
 }
 
-input[type="range"]{ width: 170px; }
+.layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  height: calc(100% - 50px);
+}
 
-.pill{
+.panel {
+  padding: 14px 14px;
+  border-right: 1px solid rgba(255,255,255,0.08);
+  background: #0b1220;
+}
+
+.panel h2 {
+  margin: 10px 0 8px;
+  font-size: 14px;
+}
+
+.row {
+  margin: 8px 0;
+}
+
+.hint {
+  margin: 6px 0 0;
   font-size: 12px;
-  color: rgba(231,238,252,.80);
-  padding: 4px 8px;
-  border: 1px solid rgba(255,255,255,.14);
-  border-radius: 999px;
-}
-
-.btn{
-  padding: 9px 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,.16);
-  background: rgba(0,0,0,.12);
-  color: var(--text);
-  cursor: pointer;
-}
-.btn:hover{ background: rgba(255,255,255,.06); }
-
-.status{
-  margin-top: 12px;
-  padding: 10px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(0,0,0,.18);
-  font-size: 12px;
-  color: rgba(231,238,252,.86);
-  white-space: pre-wrap;
-}
-
-.chartCard{
-  border: 1px solid rgba(255,255,255,.12);
-  border-radius: 16px;
-  padding: 10px;
-  background: rgba(0,0,0,.14);
-}
-.chartStats{
-  margin-top: 8px;
-  font-size: 12px;
-  color: rgba(231,238,252,.80);
+  opacity: 0.8;
   line-height: 1.35;
 }
 
-/* Map */
-.mapWrap{ height: 100%; width: 100%; }
-#map{ height: 100%; width: 100%; background: rgba(0,0,0,.10); }
+.mapwrap {
+  position: relative;
+}
 
-@media (max-width: 900px){
-  .app{
-    grid-template-columns: 1fr;
-    grid-template-rows: 420px 1fr;
-  }
-  .panel{
-    border-right:none;
-    border-bottom: 1px solid var(--border);
-  }
+#map {
+  height: 100%;
+  width: 100%;
+  background: #0b1220;
 }
