@@ -5,43 +5,63 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Cattle Tracking (UN Prototype)</title>
 
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="./styles.css" />
 
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
+
 <body>
-  <header class="topbar">
-    <div class="brand">Cattle Tracking (UN Prototype)</div>
-    <div id="status" class="status">Loading…</div>
-  </header>
-
-  <main class="layout">
-    <aside class="panel">
-      <h2>Layers</h2>
-
-      <div class="row">
-        <label><input type="checkbox" data-layer="detections" checked> Detections</label>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="card">
+        <h1>Cattle Tracking (UN Prototype)</h1>
+        <div class="sub">Prototype viewer</div>
       </div>
 
-      <hr />
+      <div class="card">
+        <h2>Layers</h2>
+        <label class="check">
+          <input id="detectionsToggle" type="checkbox" checked />
+          <span>Detections</span>
+        </label>
 
-      <h2>Basemap</h2>
-      <p class="hint">Use the top-right control on the map to switch Street/Satellite.</p>
+        <button id="reloadBtn" class="btn">Reload data/latest</button>
 
-      <hr />
+        <div id="status" class="status">Ready.</div>
+      </div>
 
-      <h2>Zoom</h2>
-      <p class="hint">Satellite “native” zoom is limited. We allow deeper zoom by over-zooming (it stretches imagery instead of erroring).</p>
+      <div class="card">
+        <h2>NDVI (overlay)</h2>
+        <label class="check">
+          <input id="ndviToggle" type="checkbox" />
+          <span>Show NDVI overlay (NASA GIBS)</span>
+        </label>
+
+        <div class="row">
+          <div class="label">NDVI opacity</div>
+          <div class="value" id="ndviOpacityLabel">65%</div>
+        </div>
+        <input id="ndviOpacity" type="range" min="0" max="100" value="65" />
+        <div class="hint">This is a “works now” NDVI overlay. Sentinel-2 NDVI comes later.</div>
+      </div>
+
+      <div class="card">
+        <h2>Zoom</h2>
+        <div class="hint">
+          Satellite “native” zoom is limited. We allow deeper zoom by over-zooming
+          (stretches imagery instead of error tiles).
+        </div>
+      </div>
     </aside>
 
-    <section class="mapwrap">
+    <main class="mapwrap">
       <div id="map"></div>
-    </section>
-  </main>
+    </main>
+  </div>
 
-  <!-- Scripts -->
+  <!-- Leaflet JS MUST load before app.js -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="app.js" defer></script>
+  <script src="./app.js"></script>
 </body>
 </html>
