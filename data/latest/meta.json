@@ -1,6 +1,6 @@
 {
   "status": "ok",
-  "updated_utc": "2026-02-15T03:18:31.102919+00:00",
+  "updated_utc": "2026-02-15T03:32:20.851422+00:00",
   "input_image": "inputs/test.jpg",
   "detections_written": 0,
   "note": "Converted pixel centers to lat/lon using bbox_wgs84 in inputs/tile_meta.json."
