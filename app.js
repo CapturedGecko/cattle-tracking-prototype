@@ -42,12 +42,12 @@ if (typeof L === "undefined") {
 // IMPORTANT: we allow deep zoom overall, but cap SATELLITE when selected to avoid “map data not yet available”.
 const map = L.map("map", {
   zoomControl: true,
-  maxZoom: 22
+  maxZoom: 17
 }).setView([7.5, 30.5], 6);
 
 // Base maps
 const street = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  maxZoom: 22,
+  maxZoom: 17,
   maxNativeZoom: 19,     // over-zoom beyond 19 (stretches)
   attribution: "&copy; OpenStreetMap contributors",
   errorTileUrl: "data:image/gif;base64,R0lGODlhAQABAAAAACw="
@@ -56,8 +56,8 @@ const street = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
 const satellite = L.tileLayer(
   "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
   {
-    maxZoom: 18,          // CAP satellite to native to avoid the “map data not yet available” tiles
-    maxNativeZoom: 18,
+    maxZoom: 17,          // CAP satellite to native to avoid the “map data not yet available” tiles
+    maxNativeZoom: 17,
     attribution: "Tiles &copy; Esri",
     errorTileUrl: "data:image/gif;base64,R0lGODlhAQABAAAAACw="
   }
