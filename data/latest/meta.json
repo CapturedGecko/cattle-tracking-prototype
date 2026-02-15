@@ -1,8 +1,7 @@
 {
   "status": "ok",
+  "updated_utc": "2026-02-15T03:18:31.102919+00:00",
   "input_image": "inputs/test.jpg",
-  "workspace": "tks-drone-replicate-12",
-  "workflow_id": "custom-workflow",
-  "updated_utc": "2026-02-15T03:06:06.059351+00:00",
-  "note": "raw_inference.json saved. detections.geojson stays empty until we add georeferencing (lat/lon)."
+  "detections_written": 0,
+  "note": "Converted pixel centers to lat/lon using bbox_wgs84 in inputs/tile_meta.json."
 }

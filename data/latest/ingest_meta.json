@@ -1,17 +1,17 @@
 {
   "status": "ok",
-  "source": "earth-search (STAC) sentinel-2-l2a",
-  "item_id": "S2A_35PLP_20260214_0_L2A",
-  "datetime": "2026-02-14T08:57:11.890000Z",
-  "cloud_cover": 0,
-  "asset_key": "thumbnail",
-  "asset_href": "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/35/P/LP/2026/2/S2A_35PLP_20260214_0_L2A/preview.jpg",
-  "bbox_used": [
-    24.0,
-    3.0,
-    36.0,
-    13.0
-  ],
-  "saved_image": "inputs/test.jpg",
-  "updated_utc": "2026-02-15T03:06:01.868280+00:00"
+  "input_image": "inputs/test.jpg",
+  "updated_utc": "2026-02-15T03:18:31.102919+00:00",
+  "tile_meta_found": true,
+  "bbox_wgs84": {
+    "west": 30.1,
+    "south": 7.2,
+    "east": 30.9,
+    "north": 7.9
+  },
+  "image_size_px": {
+    "width": 343,
+    "height": 343
+  },
+  "note": "detections.geojson requires bbox_wgs84 + image size to convert pixels -> lat/lon."
 }
