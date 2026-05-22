@@ -1,6 +1,6 @@
 {
   "status": "ok",
-  "updated_utc": "2026-05-21T17:32:13.924983+00:00",
+  "updated_utc": "2026-05-22T17:13:00.522173+00:00",
   "input_image": "inputs/test.jpg",
   "predictions_found": 1,
   "note": "roboflow_summary.json saved (small). annotated.jpg saved if present. detections.geojson empty until georeferencing is added."
